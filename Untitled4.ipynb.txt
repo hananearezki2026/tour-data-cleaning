@@ -1,0 +1,99 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "source": [
+        "\n",
+        "import pandas as pd\n",
+        "import re\n",
+        "\n",
+        "# 1. Load the dataset / Chargement du jeu de données\n",
+        "df = pd.read_csv('CT.csv')\n",
+        "\n",
+        "# Clean column names (remove invisible characters and spaces)\n",
+        "# Nettoyage des noms de colonnes (suppression des caractères invisibles et espaces)\n",
+        "df.columns = [col.replace('\\xa0', ' ').strip() for col in df.columns]\n",
+        "\n",
+        "def clean_value(value, is_ref_col=False):\n",
+        "    \"\"\"\n",
+        "    Function to clean cell content: removes citations [x] and currency symbols.\n",
+        "    Fonction pour nettoyer le contenu des cellules : supprime les citations [x] et les symboles monétaires.\n",
+        "    \"\"\"\n",
+        "    if pd.isna(value) or str(value).strip() == \"\":\n",
+        "        return None\n",
+        "\n",
+        "    val_str = str(value).strip()\n",
+        "\n",
+        "    # Remove citations like [1], [a] except for the 'Ref.' column\n",
+        "    # Supprimer les notes type [1], [a] sauf pour la colonne 'Ref.'\n",
+        "    if not is_ref_col:\n",
+        "        val_str = re.sub(r'\\[.*?\\]', '', val_str)\n",
+        "\n",
+        "    # Remove financial symbols ($) and commas\n",
+        "    # Supprimer les symboles financiers ($) et les virgules\n",
+        "    val_str = val_str.replace('$', '').replace(',', '').strip()\n",
+        "\n",
+        "    if val_str == '' or val_str == '-':\n",
+        "        return None\n",
+        "    return val_str\n",
+        "\n",
+        "# 2. Apply cleaning / Application du nettoyage\n",
+        "df_clean = df.copy()\n",
+        "for col in df_clean.columns:\n",
+        "    # Identify the 'Ref.' column / Identifier la colonne 'Ref.'\n",
+        "    is_ref = (col == 'Ref.')\n",
+        "    df_clean[col] = df_clean[col].apply(lambda x: clean_value(x, is_ref_col=is_ref))\n",
+        "\n",
+        "# 3. Secure numerical conversion / Conversion numérique sécurisée\n",
+        "\n",
+        "# Convert to nullable integers (avoids .0) / Convertir en entiers (évite le .0)\n",
+        "cols_to_int = ['Rank', 'Peak', 'All Time Peak', 'Shows']\n",
+        "for col in cols_to_int:\n",
+        "    if col in df_clean.columns:\n",
+        "        df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce').astype('Int64')\n",
+        "\n",
+        "# Convert financial data to float / Convertir les données financières en float\n",
+        "cols_to_float = ['Actual gross', 'Adjusted gross (in 2022 dollars)', 'Average gross']\n",
+        "for col in cols_to_float:\n",
+        "    if col in df_clean.columns:\n",
+        "        df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')\n",
+        "\n",
+        "# 4. Save result / Sauvegarde du résultat\n",
+        "df_clean.to_csv('CT_parfait.csv', index=False)\n",
+        "\n",
+        "print(\"Process completed / Nettoyage terminé !\")"
+      ],
+      "metadata": {
+        "id": "m_vubX9mH2HS",
+        "outputId": "3cdde227-c021-4f19-8847-a14373531163",
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        }
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Process completed / Nettoyage terminé !\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
